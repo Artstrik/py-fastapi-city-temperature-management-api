@@ -18,6 +18,11 @@ class City(CityBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
 
+# City schema with temperature count
+class CityWithCount(City):
+    temperatures_count: int = 0
+    model_config = ConfigDict(from_attributes=True)
+
 # Temperature schemas
 class TemperatureBase(BaseModel):
     city_id: int
@@ -31,12 +36,7 @@ class Temperature(TemperatureBase):
     date_time: datetime
     model_config = ConfigDict(from_attributes=True)
 
-# Response schemas
-class CityWithCount(City):
-    """City schema with temperature count included"""
-    temperatures_count: int = 0
-
+# Temperature schema with city name
 class TemperatureWithCity(Temperature):
-    """Temperature schema with city name included"""
     city_name: str
     model_config = ConfigDict(from_attributes=True)

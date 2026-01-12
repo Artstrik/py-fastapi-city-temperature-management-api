@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional, Tuple
 from . import models, schemas
@@ -14,7 +14,7 @@ def create_city(db: Session, city: schemas.CityCreate) -> models.City:
     return db_city
 
 
-def get_cities(db: Session, skip: int = 0, limit: int = 100) -> List[Tuple[models.City, int]]:
+def get_cities_with_counts(db: Session, skip: int = 0, limit: int = 100) -> List[Tuple[models.City, int]]:
     """Get cities with their temperature counts in a single query"""
     return db.query(
         models.City,
@@ -46,6 +46,11 @@ def get_city_with_count(db: Session, city_id: int) -> Optional[Tuple[models.City
 
 def get_city_by_id(db: Session, city_id: int) -> Optional[models.City]:
     return db.query(models.City).filter(models.City.id == city_id).first()
+
+
+def get_cities(db: Session) -> List[models.City]:
+    """Get all cities without temperature counts"""
+    return db.query(models.City).all()
 
 
 def update_city(db: Session, city_id: int, city_update: schemas.CityUpdate) -> Optional[models.City]:
@@ -81,17 +86,22 @@ def create_temperature(db: Session, temperature: schemas.TemperatureCreate) -> m
     return db_temperature
 
 
-def get_temperatures(db: Session, city_id: Optional[int] = None, skip: int = 0, limit: int = 100) -> List[
-    models.Temperature]:
-    """Get temperature records with city information pre-loaded"""
-    query = db.query(models.Temperature).options(
-        joinedload(models.Temperature.city)
+def get_temperatures_with_cities(db: Session, city_id: Optional[int] = None, skip: int = 0, limit: int = 100) -> List[
+    Tuple[models.Temperature, str]]:
+    """Get temperature records with city names"""
+    query = db.query(
+        models.Temperature,
+        models.City.name.label('city_name')
+    ).join(
+        models.City, models.Temperature.city_id == models.City.id
     )
 
     if city_id:
         query = query.filter(models.Temperature.city_id == city_id)
 
-    return query.order_by(models.Temperature.date_time.desc()).offset(skip).limit(limit).all()
+    return query.order_by(
+        models.Temperature.date_time.desc()
+    ).offset(skip).limit(limit).all()
 
 
 def get_temperature_count_by_city(db: Session, city_id: int) -> int:
@@ -99,17 +109,3 @@ def get_temperature_count_by_city(db: Session, city_id: int) -> int:
     return db.query(func.count(models.Temperature.id)).filter(
         models.Temperature.city_id == city_id
     ).scalar()
-
-
-def get_cities_temperature_counts(db: Session, city_ids: List[int]) -> dict:
-    """Get temperature counts for multiple cities in a single query"""
-    results = db.query(
-        models.Temperature.city_id,
-        func.count(models.Temperature.id).label('count')
-    ).filter(
-        models.Temperature.city_id.in_(city_ids)
-    ).group_by(
-        models.Temperature.city_id
-    ).all()
-
-    return {city_id: count for city_id, count in results}
