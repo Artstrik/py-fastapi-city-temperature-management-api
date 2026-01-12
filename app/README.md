@@ -118,7 +118,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
 | ------ | ----------------------------------------- | ------------------------------------ |
 | POST   | `/api/v1/temperatures/update`             | Fetch and store current temperatures |
 | GET    | `/api/v1/temperatures/`                   | Get all temperature records          |
-| GET    | `/api/v1/temperatures/?city_id={city_id}` | Get temperatures by city             |
+
 
 ---
 
