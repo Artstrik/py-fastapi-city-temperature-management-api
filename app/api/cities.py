@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
-from typing import List, Optional
-from .. import schemas, crud, dependencies
+from typing import List
+from .. import schemas, crud, models
 from ..database import get_db
 
 router = APIRouter(prefix="/cities", tags=["cities"])
@@ -43,15 +44,34 @@ def read_cities(
     return cities
 
 
-@router.get("/{city_id}", response_model=schemas.City)
-def read_city(
-        city_id: int,
+@router.get("/", response_model=List[schemas.CityWithCount])
+def read_cities(
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=1000),
         db: Session = Depends(get_db)
 ):
-    """Get a specific city by ID"""
-    city = dependencies.get_city(db, city_id)
-    city.temperatures_count = crud.get_temperature_count_by_city(db, city_id)
-    return city
+    """Get all cities with temperature counts in a single query"""
+    # Single optimized query using LEFT JOIN and GROUP BY
+    cities_with_counts = db.query(
+        models.City,
+        func.count(models.Temperature.id).label('temperatures_count')
+    ).outerjoin(
+        models.Temperature,
+        models.City.id == models.Temperature.city_id
+    ).group_by(
+        models.City.id
+    ).order_by(
+        models.City.id
+    ).offset(skip).limit(limit).all()
+
+    # Convert to response models
+    result = []
+    for city, count in cities_with_counts:
+        city_data = schemas.CityWithCount.model_validate(city)
+        city_data.temperatures_count = count
+        result.append(city_data)
+
+    return result
 
 
 @router.put("/{city_id}", response_model=schemas.City)

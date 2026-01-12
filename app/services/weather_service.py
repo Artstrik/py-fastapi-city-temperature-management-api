@@ -1,7 +1,6 @@
 import aiohttp
 import asyncio
 from typing import List, Dict, Optional
-from datetime import datetime
 import os
 from dotenv import load_dotenv
 
@@ -51,8 +50,8 @@ class WeatherService:
         for city, temp in zip(cities, temperatures):
             if temp is not None:
                 results.append({
-                    "city_id": city["id"],
-                    "temperature": temp
+                    'city_id': city['id'],
+                    'temperature': temp
                 })
 
         return results
